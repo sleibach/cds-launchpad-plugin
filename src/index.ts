@@ -229,7 +229,8 @@ export class cds_launchpad_plugin{
 
           // App tile template - if not hidden from launchpad
           if (!tileconfig?.hideLauncher) {
-            // Sandbox preloads sap.ushell only (see launchpad.html); CDM applauncherdynamic tiles are not loaded.
+            // DynamicTile: FlpLaunchPageAdapter renders a GenericTile+NumericContent.
+            // The launchpad template's tile-updater script fetches serviceUrl and updates the displayed number.
             config.services.LaunchPage.adapter.config.groups[0].tiles.push({
               id: tileId,
               properties: Object.assign({
@@ -242,9 +243,7 @@ export class cds_launchpad_plugin{
                 serviceUrl: manifest["sap.app"].dataSources[tileconfig.indicatorDataSource.dataSource].uri + tileconfig.indicatorDataSource.path
               } : {}),
               tileType: tileconfig.indicatorDataSource ? 'sap.ushell.ui.tile.DynamicTile' : 'sap.ushell.ui.tile.StaticTile',
-              serviceRefreshInterval: (tileconfig.indicatorDataSource && tileconfig.indicatorDataSource.refresh || 10)
-                // default 10 sec in seconds → adapter expects ms for refresh tick
-                * 1000
+              serviceRefreshInterval: tileconfig.indicatorDataSource?.refresh || 10 // seconds; FlpLaunchPageAdapter multiplies by 1000 internally
             });
           }
 

@@ -70,5 +70,63 @@
 <body class="sapUiBody sapUShellFullHeight">
     <div id="canvas" class="sapUShellFullHeight"></div>
 </body>
+<script>
+(function () {
+    "use strict";
+    function parseServiceResponse(sText) {
+        try {
+            var o = JSON.parse(sText);
+            if (typeof o === "number") return o;
+            if (o.number !== undefined) return o.number;
+            var v = o.value;
+            if (typeof v === "number") return v;
+            if (v && v.number !== undefined) return v.number;
+        } catch (e) {
+            var n = parseFloat(sText.trim());
+            if (!isNaN(n)) return n;
+        }
+        return undefined;
+    }
+    function updateDynamicTiles(oLaunchPage) {
+        oLaunchPage.getGroups().done(function (aGroups) {
+            aGroups.forEach(function (oGroup) {
+                oLaunchPage.getTiles(oGroup).forEach(function (oTile) {
+                    var sUrl = oTile.properties && oTile.properties.serviceUrl;
+                    if (!sUrl) return;
+                    fetch(sUrl)
+                        .then(function (r) { return r.text(); })
+                        .then(function (sData) {
+                            var nValue = parseServiceResponse(sData);
+                            if (nValue === undefined || nValue === null) return;
+                            oLaunchPage.getTileView(oTile).done(function (oView) {
+                                try {
+                                    var oContent = oView.getTileContent()[0].getContent();
+                                    if (oContent && typeof oContent.setValue === "function") {
+                                        oContent.setValue(String(nValue));
+                                    }
+                                } catch (e) { /* tile not yet rendered */ }
+                            });
+                        })
+                        .catch(function () { /* backend not reachable */ });
+                });
+            });
+        });
+    }
+    function startTileUpdater() {
+        sap.ushell.Container.getServiceAsync("LaunchPage").then(function (oLaunchPage) {
+            setTimeout(function () { updateDynamicTiles(oLaunchPage); }, 1500);
+            setInterval(function () { updateDynamicTiles(oLaunchPage); }, 30000);
+        });
+    }
+    function waitForContainer(nAttempts) {
+        if (window.sap && sap.ushell && sap.ushell.Container) {
+            startTileUpdater();
+        } else if (nAttempts > 0) {
+            setTimeout(function () { waitForContainer(nAttempts - 1); }, 500);
+        }
+    }
+    waitForContainer(30);
+})();
+</script>
 
 </html>
