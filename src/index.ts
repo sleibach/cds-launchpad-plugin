@@ -229,34 +229,23 @@ export class cds_launchpad_plugin{
 
           // App tile template - if not hidden from launchpad
           if (!tileconfig?.hideLauncher) {
-            const baseProperties = {
-              targetURL: `#${tileconfig.semanticObject}-${tileconfig.action}`,
-              title: tileconfig.title,
-              info: tileconfig.info,
-              subtitle: tileconfig.subTitle,
-              icon: tileconfig.icon
-            };
-
-            if (tileconfig.indicatorDataSource) {
-              // Dynamic tile: use the CDM applauncherdynamic component so the tile manages
-              // its own HTTP requests and updates the display (number, info, infoState, etc.)
-              config.services.LaunchPage.adapter.config.groups[0].tiles.push({
-                id: tileId,
-                properties: baseProperties,
-                tileType: 'sap.ushell.components.tiles.cdm.applauncherdynamic.DynamicTile',
-                configuration: {
-                  serviceUrl: manifest["sap.app"].dataSources[tileconfig.indicatorDataSource.dataSource].uri + tileconfig.indicatorDataSource.path,
-                  serviceRefreshInterval: tileconfig.indicatorDataSource.refresh || 10 // seconds; the CDM controller multiplies by 1000 internally
-                }
-              });
-            } else {
-              config.services.LaunchPage.adapter.config.groups[0].tiles.push({
-                id: tileId,
-                properties: baseProperties,
-                tileType: 'sap.ushell.ui.tile.StaticTile',
-                serviceRefreshInterval: 10 * 1000
-              });
-            }
+            // Sandbox preloads sap.ushell only (see launchpad.html); CDM applauncherdynamic tiles are not loaded.
+            config.services.LaunchPage.adapter.config.groups[0].tiles.push({
+              id: tileId,
+              properties: Object.assign({
+                targetURL: `#${tileconfig.semanticObject}-${tileconfig.action}`,
+                title: tileconfig.title,
+                info: tileconfig.info,
+                subtitle: tileconfig.subTitle,
+                icon: tileconfig.icon
+              }, tileconfig.indicatorDataSource ? {
+                serviceUrl: manifest["sap.app"].dataSources[tileconfig.indicatorDataSource.dataSource].uri + tileconfig.indicatorDataSource.path
+              } : {}),
+              tileType: tileconfig.indicatorDataSource ? 'sap.ushell.ui.tile.DynamicTile' : 'sap.ushell.ui.tile.StaticTile',
+              serviceRefreshInterval: (tileconfig.indicatorDataSource && tileconfig.indicatorDataSource.refresh || 10)
+                // default 10 sec in seconds → adapter expects ms for refresh tick
+                * 1000
+            });
           }
 
           config.services.ClientSideTargetResolution.adapter.config.inbounds[tileId] = tileconfig;
